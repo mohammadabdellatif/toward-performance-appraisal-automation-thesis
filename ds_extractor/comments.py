@@ -1,7 +1,9 @@
 import math
+import os.path
 import re
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from re import Pattern
 
 import pandas as pd
@@ -339,9 +341,14 @@ class CommentsDatasetExtractor(DatasetExtractorBase):
     def __comments_preprocessor(self, profiles_df) -> CommentPreprocessor:
         names: set[str] = self.__names_as_set(profiles_df)
         # the product names list should come from a file
-        products: set[str] = set(''.split('|'))
+        products = self.__products_names()
         return CommentPreprocessor(
             tokens_replacement=[(place_holder_token('user'), names), (place_holder_token('product'), products)])
+
+    def __products_names(self):
+        products = set(str)
+        self.__add_names_from_file('./temp_data/products.txt', products)
+        return products
 
     def __new_task(self, comment_preprocessor, comments_df, status_listener, task_id, work_share):
         share_start = int(task_id * work_share)
@@ -359,10 +366,16 @@ class CommentsDatasetExtractor(DatasetExtractorBase):
 
         return r
 
-    @staticmethod
-    def add_statis_names(names_list):
+    def add_statis_names(self, names_list):
         # those should be read from a file
-        names_list.add('')
+        self.__add_names_from_file("./temp_data/names.txt", names_list)
+
+    def __add_names_from_file(self, file_path, names_list):
+        static_names = Path(file_path)
+        if os.path.exists(static_names):
+            with open(static_names) as file:
+                for line in file:
+                    names_list.add(line.strip())
 
     def __is_valid_name(self, n: str):
         if self.__is_blank(n) \
@@ -444,11 +457,10 @@ class CommentsPreProcessTask:
         new_row['actionbody'] = utterance
         return pd.concat([utterances_df, DataFrame(columns=utr_cols, data=[new_row])])
 
-
-if __name__ == '__main__':
-    names = set()
-    CommentsDatasetExtractor.add_statis_names(names)
-    cp = CommentPreprocessor(tokens_replacement=[('ph_user', names)])
-    c = cp.preprocess_comment(
-        "<p>Dear <span>[~jo.01]</span> </p><p>Kindly be informed that your ticket has been assigned.</p><p>Regards,</p><p>HelpDesk Team.</p>")
-    print(c)
+# if __name__ == '__main__':
+#     static_names = set()
+#     CommentsDatasetExtractor.add_statis_names(static_names)
+#     cp = CommentPreprocessor(tokens_replacement=[('ph_user', static_names)])
+#     c = cp.preprocess_comment(
+#         "<p>Dear <span>[~jo.01]</span> </p><p>Kindly be informed that your ticket has been assigned.</p><p>Regards,</p><p>HelpDesk Team.</p>")
+#     print(c)
