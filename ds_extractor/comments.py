@@ -346,7 +346,7 @@ class CommentsDatasetExtractor(DatasetExtractorBase):
             tokens_replacement=[(place_holder_token('user'), names), (place_holder_token('product'), products)])
 
     def __products_names(self):
-        products = set(str)
+        products: set[str] = set()
         self.__add_names_from_file('./temp_data/products.txt', products)
         return products
 
