@@ -7,6 +7,7 @@ LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 USER root
-
+COPY requirements.txt /home/jovyan/requirements.txt
 RUN apt install build-essential
+RUN pip install -r /home/jovyan/requirements.txt
 
