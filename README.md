@@ -118,3 +118,11 @@ ML models to predict the scores.
 required datasets under that folder. Any notebook not mentioned in the [notebooks](#notebooks) section are for running
 experiments and practices that could help in the study.
 
+
+## Masked Features
+Below are the list of features/fields that are masked in the dataset, maintaining the context of usage for original values:
+
+1. issues.csv: issue_proj, issue_reporter, and issue_assignee.
+2. issues_snapshots.csv: issue_proj, issue_reporter, and issue_assignee.
+2. issues_change_history.csv: the value of the records for field with key 'assignee' are masked.
+3. pps_utterances.csv and utterances.csv: author and some values where masked

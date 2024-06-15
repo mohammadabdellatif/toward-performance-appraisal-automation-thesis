@@ -22,7 +22,7 @@ def digit_at(value: int, at: int) -> int:
 
 
 class Masking:
-    __alphabet: str = 'abcdefghijklmnopqrstuvwxyz0123456789-_'
+    __alphabet: str = '.abcdefghijklmnopqrstuvwxyz0123456789-_'
 
     def __init__(self,
                  pin_code: int,
@@ -43,20 +43,32 @@ class Masking:
         if self.alphabet == alphabet:
             raise ValueError('Weak pin code')
 
-    def mask(self, value: str):
-        return self.__mask(self.shift, value)
+    def __mask_iterable(self, values: Iterable, non_default) -> Iterable:
+        masked_values = []
+        for value in values:
+            masked_values.append(self.__mask_value(value, non_default))
+        return masked_values
+
+    def mask(self, value: object, none_default=None):
+        if isinstance(value, (list, set)):
+            return self.__mask_iterable(value, none_default)
+        return self.__mask_value(value, none_default)
+
+    def __mask_value(self, value, none_default):
+        return self.__mask(self.shift, str(value), none_default)
 
     def unmask(self, value: str) -> str:
         return self.__mask(-self.shift, value)
 
-    def __mask(self, the_shift, value):
+    def __mask(self, the_shift, value, none_default):
         if value is None:
-            return None
+            return none_default
         result = ''
         for c in value.lower():
             try:
                 c_idx = self.alphabet.index(c)
             except ValueError:
+                print(f'character not from alphabet: [{c}]')
                 result += c
             else:
                 e_idx = (the_shift + c_idx) % len(self.alphabet)
