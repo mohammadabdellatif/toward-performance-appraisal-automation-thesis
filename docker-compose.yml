@@ -3,7 +3,8 @@ services:
   #Jupyter notebook
   jupyter-notebook:
     build:
-      dockerfile: docker-jupyter/Dockerfile
+      context: ./
+      dockerfile: ./docker-jupyter/Dockerfile
     ports:
       - "8888:8888"
       - "4040-4080:4040-4080"

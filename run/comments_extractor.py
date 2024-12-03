@@ -1,4 +1,5 @@
 import pandas as pd
+import nltk
 from pandas import DataFrame
 
 from ds_extractor.comments import CommentsDatasetExtractor
@@ -8,7 +9,7 @@ from preprocessing.comments import CommentsPreProcessor
 
 def extract_utterances():
     print('extract comments from db')
-    comments_extractor = CommentsDatasetExtractor('postgresql+psycopg2://admin:sami@127.0.0.1:5455/supportdb1',
+    comments_extractor = CommentsDatasetExtractor('postgresql+psycopg2://admin:sami@127.0.0.1:5454/supportdb1',
                                                   "../temp_data",
                                                   thread_count=5)
     comments_extractor.process()
@@ -25,5 +26,6 @@ def generate_pre_processed_utterances(utterances_df: DataFrame):
 
 
 if __name__ == '__main__':
+    nltk.download('punkt')
     utterances_df = extract_utterances()
     generate_pre_processed_utterances(utterances_df)
