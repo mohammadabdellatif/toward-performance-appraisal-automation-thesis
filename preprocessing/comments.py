@@ -46,10 +46,6 @@ common_words_replacers = [
                      r'\1ph_com_protocol\8'),
     RegexReplacement("unify SQL", r"ph_[\w_]*sql", 'ph_sql'),
     RegexReplacement("stack trace as logs", r"ph_[\w_]*trace", 'ph_logs'),
-    # RegexReplacement("Products",
-    #                  r"(\b)(ecc|rdc|echeque|cheque|pps|payhub|cliq|pdc|corpay|qatch|ebpp|mpay|pssig|wps|bankpay|mmsp|mmsc|aml|ach|)(\b)",
-    #                  r'\1ph_a_product\3'),
-    # RegexReplacement("Numbers", r"(\b)\d+(.\d+)?(\b)", r'\1ph_number\3'),
     RegexReplacement("Separate ? from end of words", r"(\w)\?", r'\1 ?'),
     SentenceReplacement("Replace single Y with Yes", r"y(\.)?", 'yes'),
     SentenceReplacement("Replace single N with no", r"n(\.)?", 'no')
