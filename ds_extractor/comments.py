@@ -93,7 +93,7 @@ class TokenReplacement(Replacement):
 
 
 def place_holder_token(token):
-    return f'ph_{token}'
+    return f' ph_{token} '
 
 
 class CommentPreprocessor:
@@ -276,17 +276,34 @@ class PreProcessResult:
         self.completed = completed
         self.error = error
 
+class CommentsFilterByIssuesIDs:
+
+    def __init__(self, issue_ids: list):
+        self.issue_ids = issue_ids
+
+    def filter(self, comments_df: DataFrame):
+        selected = comments_df['issueid'].isin(self.issue_ids)
+        return comments_df[selected]
 
 class CommentsDatasetExtractor(DatasetExtractorBase):
 
-    def __init__(self, db_url: str, target_dir: str = ".", thread_count: int = 8):
+    def __init__(self, db_url: str, target_dir: str = ".", thread_count: int = 8, extra_filter: object = None):
         super().__init__(db_url, self.__extract_comments_dataset, target_dir)
         self.thread_count = thread_count
+        def empty_func(ds): return ds
+
+        self.extra_filter = empty_func
+        if extra_filter is not None:
+            self.extra_filter = extra_filter;
+
 
     def __extract_comments_dataset(self, conn):
         comments_df = run_query(conn, Queries.comments(), index_col='id')
         issue_description_df = run_query(conn, Queries.issues_description_as_comments(), index_col='id')
         comments_df = pd.concat([comments_df, issue_description_df])
+        logger.info(f"count before extra filter {len(comments_df)}")
+        comments_df = self.extra_filter(comments_df)
+        logger.info(f"count after extra filter {len(comments_df)}")
         profiles_df = run_query(conn, Queries.users_profiles(), index_col='user_name')
         utterances_df = self.__preprocess_comments(comments_df, profiles_df)
         utterances_df.rename_axis('id', inplace=True)
