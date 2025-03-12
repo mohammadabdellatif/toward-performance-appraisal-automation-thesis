@@ -25,11 +25,22 @@ word_regex = re.compile(r"(#[a-z_]+?#|[a-z0-9\-'\",\?!:\.#”“`;\(\)]+)[\.\?!,
 
 
 class Replacement:
-    def process(self, text: str):
+    """
+    The contract for any class that supports finding and replacing a value ina string
+    """
+
+    def process(self, text: str) -> str:
+        """
+        Accepts a string, find a text to replace, replace it, then returns it
+        """
         pass
 
 
 class SentenceReplacement(Replacement):
+    """
+    A replacement that replaces the whole text with a value
+    if it matches a regex
+    """
 
     def __init__(self, nature: str, sentence_regex: str, val: str) -> None:
         self.val = val
@@ -43,6 +54,10 @@ class SentenceReplacement(Replacement):
 
 
 class GreedyReplacement:
+    """
+    A replacer that replaces the whole text with a single replacement
+    if at least one replacement was matched.
+    """
 
     def __init__(self, replacement, replacements: list[Replacement]) -> None:
         self.replacements = replacements
@@ -56,6 +71,23 @@ class GreedyReplacement:
 
 
 class RegexReplacement(Replacement):
+    """
+    A replacer that finds a pattern according to a regex
+    then replaces it with a value.
+
+    It supports inspecting if multiple matches were found
+    in the text beside each other and replace them with
+    one single value.
+
+    Example:
+        text: The values are 12 34 56
+        regex: \d+
+        replacement: n
+    Default behavior example:
+        The values are n n n
+    Behavior with sequential join:
+        The values are n
+    """
 
     def __init__(self, nature, regex, replacement, sequential_join: bool = False):
         self.nature = nature
@@ -71,11 +103,25 @@ class RegexReplacement(Replacement):
             self.sequential_join = join
 
     def process(self, text: str):
+        """
+        Replaces a value by the passed regex and replaces sequential
+        matches with a single value.
+        """
         processed = re.sub(self.regex, self.replacement, text).strip()
         return self.sequential_join(processed)
 
 
 class TokenReplacement(Replacement):
+    """
+    A Replacer that replace an exact token with a value
+
+    Example:
+        text: the text is ab bc c d
+        tokens: ['ab','bc']
+        value: ##
+    result:
+        the text is ## ## c d
+    """
 
     def __init__(self, val, tokens) -> None:
         self.val = val
@@ -114,6 +160,8 @@ class CommentPreprocessor:
 
             RegexReplacement("user mentioned", r"\[\s*~[\w\.]+\s*\]", place_holder_token('user'), sequential_join=True),
             RegexReplacement("user mentioned", r"@([\w]+)(\s+[\w]+){,2}", place_holder_token('user'),
+                             sequential_join=True),
+            RegexReplacement("user mentioned", r"&lt;~[\w_\.\d]+&gt;", place_holder_token('user'),
                              sequential_join=True),
 
             RegexReplacement("Break", r"<br\s?/>|</?p>|&lt;/?p&gt;", "\n"),
@@ -212,8 +260,9 @@ class CommentPreprocessor:
             RegexReplacement("setup scripts", r"(set|declare)[\s\w=\(\)]+;", place_holder_token('sql')),
             RegexReplacement("windows path", r'\b[a-z]?:[\\][^<>:\"/|?*]+\b', place_holder_token('path')),
             RegexReplacement("Posix path", r'\b/[\w/\-]{2,}\b', place_holder_token('path')),
-            RegexReplacement("files", r"[\w\.-]+\.(sql|class|java|jsp|xml|asp|jar|war|zip|tar|rar|jks)",
-                             place_holder_token('file'))
+            RegexReplacement("files", r"[\w\.-]+\.(sql|class|java|jsp|xml|asp|jar|war|zip|tar|rar|jks|mp\d)",
+                             place_holder_token('file')),
+            RegexReplacement("clean spaces", r'[\s]{2,}', ' ')
         ]
         for tp in tokens_replacement:
             self.post_tokenize_replacements.append(TokenReplacement(tp[0], tp[1]))
@@ -248,17 +297,9 @@ class CommentPreprocessor:
         for p in paragraphs:
             tokens = sent_tokenize(p)
             for replacement in self.post_tokenize_replacements:
-                tokens = [self.__post_replacement(replacement, t) for t in tokens]
+                tokens = [replacement.process(t) for t in tokens]
             pre_processed_tokens.extend(tokens)
         return pre_processed_tokens
-
-    def __post_replacement(self, replacement: RegexReplacement, text: str):
-        return replacement.process(text)
-        # words = split_rgx.split(text)
-        # for idx, b_word in enumerate(words):
-        #     if not word_regex.fullmatch(b_word):
-        #         words[idx] = place_holder_token('unknown')
-        # return ' '.join(words)
 
 
 class PreProcessResult:
@@ -276,6 +317,7 @@ class PreProcessResult:
         self.completed = completed
         self.error = error
 
+
 class CommentsFilterByIssuesIDs:
 
     def __init__(self, issue_ids: list):
@@ -285,17 +327,18 @@ class CommentsFilterByIssuesIDs:
         selected = comments_df['issueid'].isin(self.issue_ids)
         return comments_df[selected]
 
+
 class CommentsDatasetExtractor(DatasetExtractorBase):
 
     def __init__(self, db_url: str, target_dir: str = ".", thread_count: int = 8, extra_filter: object = None):
         super().__init__(db_url, self.__extract_comments_dataset, target_dir)
         self.thread_count = thread_count
+
         def empty_func(ds): return ds
 
         self.extra_filter = empty_func
         if extra_filter is not None:
             self.extra_filter = extra_filter;
-
 
     def __extract_comments_dataset(self, conn):
         comments_df = run_query(conn, Queries.comments(), index_col='id')
@@ -402,7 +445,7 @@ class CommentsDatasetExtractor(DatasetExtractorBase):
         return True
 
     def __is_keyword(self, n):
-        return n.strip() in ('helpdesk', 'support', 'it', 'test', 'web', 'channels', 'day', 'check')
+        return n.strip() in ('helpdesk','team', 'support', 'it', 'test', 'web', 'channels', 'day', 'check')
 
     def __is_letters(self, n):
         return len(n) < 3
